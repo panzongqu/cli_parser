@@ -650,7 +650,7 @@ cparser_cmd_enter_privileged_mode (cparser_t *parser, char *buf, int buf_size)
 cparser_result_t
 cparser_cmd_enable_privileged_mode (cparser_context_t *context)
 {
-    char passwd[100];
+    static char passwd[100];
     int rc;
 
     assert(context && context->parser);

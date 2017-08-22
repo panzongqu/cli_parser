@@ -45,6 +45,10 @@
 /** Zeroize a data structure */
 #define BZERO_OUTPUT memset(output, 0, sizeof(output)); output_ptr = output
 
+static cparser_result_t test_cparser_run(cparser_t *parser);
+static cparser_result_t cparser_input_cb_login(cparser_t *conext, char *buf, int buf_size);
+static cparser_result_t cparser_input_cb_password(cparser_t *conext, char *buf, int buf_size);
+
 extern char output[2000], *output_ptr;
 extern int interactive;
 int num_passed = 0, num_failed =0;
@@ -159,7 +163,7 @@ main (int argc, char *argv[])
         if (config_file) {
             (void)cparser_load_cmd(&parser, config_file);
         }
-        cparser_run(&parser);
+        test_cparser_run(&parser);
     } else {
         /* Run the scripted tests */
         /* Test command execution without trailing space */
@@ -394,3 +398,65 @@ main (int argc, char *argv[])
     }
     return 0;
 }
+
+
+static cparser_result_t cparser_input_cb_login(cparser_t *conext, char *buf, int buf_size)
+{
+  (void)buf;
+  (void)buf_size;
+  assert(conext);
+  conext->user_buf = NULL;
+  conext->user_buf_size = 0;
+  conext->user_buf_count = 0;
+  conext->user_input_cb = NULL;
+  cparser_user_input (conext, "\nPassword:", 0, conext->user_pw, sizeof(conext->user_pw), cparser_input_cb_password);
+  conext->cli_mode = parser_cli_mode_pw;
+  return CPARSER_OK;
+}
+
+static cparser_result_t cparser_input_cb_password(cparser_t *conext, char *buf, int buf_size)
+{
+  (void)buf;
+  (void)buf_size;
+  if (!strncmp(conext->user_pw, "admin", sizeof("admin") - 1) &&
+      !strncmp(conext->user_name, "admin", sizeof("admin") - 1))
+  {
+    conext->cfg.prints(conext, "\n\n");
+    conext->cli_mode = parser_cli_mode_normal;
+  }
+  else
+  {
+    assert(conext);
+    conext->user_buf = NULL;
+    conext->user_buf_size = 0;
+    conext->user_buf_count = 0;
+    conext->user_input_cb = NULL;
+    conext->cli_mode = parser_cli_mode_login;
+    conext->cfg.prints(conext, "\n  user name(admin) or password(admin) incorrect.\n");
+    cparser_user_input (conext, "\nLogin:", 1, conext->user_name, sizeof(conext->user_name), cparser_input_cb_login);
+  }
+  return CPARSER_OK;
+}
+
+static cparser_result_t test_cparser_run(cparser_t *parser)
+{
+    int ch;
+    cparser_char_t ch_type = 0;
+
+    if (!VALID_PARSER(parser)) return CPARSER_ERR_INVALID_PARAMS;
+
+    parser->cfg.io_init(parser);
+    parser->done = 0;
+
+    parser->cli_mode = parser_cli_mode_login;
+    cparser_user_input (parser, "Login:", 1, parser->user_name, sizeof(parser->user_name), cparser_input_cb_login);
+    while (!parser->done) {
+        parser->cfg.getch(parser, &ch, &ch_type);
+        cparser_input(parser, ch, ch_type);
+    } /* while not done */
+
+    parser->cfg.io_cleanup(parser);
+
+    return CPARSER_OK;
+}
+

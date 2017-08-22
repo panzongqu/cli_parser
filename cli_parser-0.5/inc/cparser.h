@@ -800,6 +800,19 @@ typedef enum cparser_state_ {
 } cparser_state_t;
 
 /**
+ * \brief    None.
+ * \details  None.
+ */
+typedef enum
+{
+  parser_cli_mode_min,
+  parser_cli_mode_login,
+  parser_cli_mode_pw,
+  parser_cli_mode_normal,
+  parser_cli_mode_max
+} parser_cli_mode_t;
+
+/**
  * \brief    CLI parser structrure.
  * \details  This structure contains all configuration and running states.
  *           of a parser instance.
@@ -856,6 +869,14 @@ struct cparser_ {
     cparser_result_t  last_rc;
     /** End node of the command. NULL if the command is invalid. */
     cparser_node_t    *last_end_node;
+
+    /********** Parser cli user login **********/
+    /** Login user name */
+    char user_name[256];
+    /** Login user password */
+    char user_pw[256];
+    /** mode for user and command input */
+    parser_cli_mode_t cli_mode;
 };
 
 typedef cparser_result_t (*cparser_glue_fn)(cparser_t *parser);

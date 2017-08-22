@@ -491,23 +491,35 @@ cparser_input (cparser_t *parser, char ch, cparser_char_t ch_type)
             parser->user_buf[parser->user_buf_count] = '\0';
             rc = parser->user_input_cb(parser, parser->user_buf,
                                        parser->user_buf_count);
-            cparser_input_reset(parser);
-            cparser_print_prompt(parser);
+
+            if((parser->cli_mode != parser_cli_mode_login) &&
+                (parser->cli_mode != parser_cli_mode_pw))
+            {
+                cparser_input_reset(parser);
+                cparser_print_prompt(parser);
+            }
+
             return rc;
         }
 
         if ((parser->cfg.ch_erase == ch) || (parser->cfg.ch_del == ch)) {
             if (parser->user_buf_count > 0) {
                 parser->user_buf_count--;
-            }
-            if (parser->user_do_echo) {
-                parser->cfg.printc(parser, '\b');
+                if (parser->user_do_echo || parser->cli_mode == parser_cli_mode_pw) {
+                    parser->cfg.printc(parser, '\b');
+                    parser->cfg.printc(parser, ' ');
+                    parser->cfg.printc(parser, '\b');
+                }
             }
         } else if ((parser->user_buf_count + 1) < parser->user_buf_size) {
             parser->user_buf[parser->user_buf_count] = ch;
             parser->user_buf_count++;
             if (parser->user_do_echo) {
                 parser->cfg.printc(parser, ch);
+            }
+            else if(parser->cli_mode == parser_cli_mode_pw)
+            {
+              parser->cfg.printc(parser,'*');
             }
         }
         return CPARSER_OK;
